@@ -3,6 +3,7 @@ using NDesk.Options;
 using GitTfs.Core;
 using GitTfs.Util;
 using GitTfs.Core.TfsInterop;
+using System.Text.RegularExpressions;
 
 namespace GitTfs.Commands
 {
@@ -238,6 +239,10 @@ namespace GitTfs.Commands
         {
             Trace.TraceInformation("Tfs branches found:");
             var branchesToProcess = new List<BranchDatas>();
+
+            var ignoreBranchesRegexPattern = _globals.Repository.GetConfig(GitTfsConstants.IgnoreBranchesRegex);
+            Regex ignoreBranchesRegex = ignoreBranchesRegexPattern != null ? new Regex(ignoreBranchesRegexPattern) : null;
+
             foreach (var childBranchPath in childBranchPaths)
             {
                 Trace.TraceInformation("- " + childBranchPath.TfsRepositoryPath);
@@ -255,7 +260,14 @@ namespace GitTfs.Commands
                     branchDatas.Error = ex;
                 }
 
-                branchesToProcess.Add(branchDatas);
+                if (ignoreBranchesRegex?.IsMatch(childBranchPath.TfsRepositoryPath) == true)
+                {
+                    Trace.TraceInformation("  => Branch ignored because it matches ignore-branches-regex pattern");
+                }
+                else
+                {
+                    branchesToProcess.Add(branchDatas);
+                }
             }
             branchesToProcess.Add(new BranchDatas { TfsRepositoryPath = defaultRemote.TfsRepositoryPath, TfsRemote = defaultRemote, RootChangesetId = -1 });
 
